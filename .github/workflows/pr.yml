@@ -1,0 +1,56 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Build (Next.js)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Coverage gate (Fase 1 — warn)
+        run: npm run coverage:gate
+        continue-on-error: true
+        env:
+          AUDIT_LINES_MIN: '50'
+          AUDIT_BRANCHES_MIN: '40'
+          AUDIT_GATE_MODE: 'warn'
+      - name: Dependency check (ciclos — error)
+        run: npm run deps:check
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-pr-${{ github.event.pull_request.number }}
+          path: coverage/
+          retention-days: 7
+      - name: Check AGENTS.md sync
+        run: |
+          npm run sync-agents
+          if [ -n "$(git status --porcelain CLAUDE.md .cursorrules .github/copilot-instructions.md)" ]; then
+            echo "::error::AGENTS.md está dessincronizado com as cópias. Rode 'npm run sync-agents' localmente e commite."
+            git diff CLAUDE.md .cursorrules .github/copilot-instructions.md
+            exit 1
+          fi
+          echo "AGENTS.md sync OK"
