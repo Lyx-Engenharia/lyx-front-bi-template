@@ -43,7 +43,7 @@ jobs:
           AUDIT_BRANCHES_MIN: '40'
           AUDIT_GATE_MODE: 'warn'
       - name: Gerar relatório markdown
-        run: npm run audit:report > audit/report.md
+        run: npm run --silent audit:report > audit/report.md
         env:
           GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
       - name: Upsert comentário no PR
