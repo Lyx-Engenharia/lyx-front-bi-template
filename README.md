@@ -2,11 +2,15 @@
 
 Template Next.js 16 + Lyx Design System v2, variante **Business Intelligence**.
 
+Padrão visual alinhado com `lyx-bi-principal`: sidebar dinâmica por categoria + filtro de permissão, cards/charts em shadcn semantic tokens, Approach A standalone (sem sessão compartilhada com o hub).
+
 ## Diferença vs `lyx-front-template`
 
-| Camada | Sistema normal | BI |
+| Camada | Sistema normal (CRUD) | BI |
 |---|---|---|
-| Autenticação | Better Auth + setActive org | Better Auth + check membership `bi` |
+| Autenticação | Better Auth + setActive org | Stub `requireUser` (Approach A) |
+| Sidebar | 52W estática | `lyx-bi-principal` (categorias + permissões) |
+| Cards/charts | 52W (`.lyx-card`, `.stat-card`) | shadcn (`<Card>`, tokens semânticos) |
 | Dados | Fetch → monolith REST | **Supabase self-host** (read-only) |
 | Páginas | CRUD forms + listas | Read-only: KPIs + charts + filtros |
 | Stack extra | — | `@supabase/supabase-js` + `@supabase/ssr` + `date-fns` |
@@ -29,23 +33,36 @@ cp .env.example .env.local
 npm run dev   # http://localhost:3002
 ```
 
-## Auth flow
+## Sidebar / nav
+
+Sidebar lê de `src/lib/dashboards.ts`:
+
+```ts
+export const dashboards: DashboardConfig[] = [
+  dash("visao-geral",  { name: "Visão Geral",  category: "financeiro", ... }),
+  dash("comercial",    { name: "Comercial",    category: "comercial", ... }),
+  dash("financeiro",   { name: "Financeiro",   category: "financeiro", ... }),
+]
+```
+
+Cada entry vira item na sidebar agrupado por `category` e filtrado por `requiredPermission`. Adicione/remova entries conforme o BI.
+
+## Auth flow (Approach A — standalone)
 
 ```
-1. /login → POST sign-in/email no monolith
-2. Cookie sessão setada (cross-subdomain se .lyxai.com.br)
-3. authClient.organization.list() → valida membership slug='bi'
-4. Aprovado → /dashboard | Negado → signOut + erro
+1. Stub em src/lib/auth/current-user.ts retorna mock user bi_admin (todas permissões)
+2. Dev substitui por chamada real ao Better Auth do monolith
+3. requireUser() é usado no layout/server components pra proteger rotas
 ```
 
-Sem `setActive`. BI = read-only.
+API igual à do `lyx-bi-principal` — quando virar Approach B (hub central com sessão compartilhada), só troca a implementação interna.
 
 ## Data flow
 
 ```
 Client Component
   ↓ useQuery (TanStack)
-lib/queries.ts (useKpiVendas, useSerieTemporal, useRanking)
+src/lib/queries.ts
   ↓ createSupabaseBrowser()
 Supabase JS SDK → Supabase self-host (PostgREST + RLS)
   ↓ SQL
@@ -58,37 +75,57 @@ Postgres analítico (views/tabelas BI)
 src/
 ├── app/
 │   ├── layout.tsx              Providers + fonts
-│   ├── globals.css             tokens 52W
+│   ├── globals.css             tokens shadcn
 │   ├── page.tsx                redirect /login
-│   ├── login/page.tsx          valida membership 'bi'
+│   ├── login/
+│   │   ├── page.tsx
+│   │   └── actions.ts          logoutAction stub
 │   └── dashboard/
-│       ├── layout.tsx          sidebar BI (Vendas/Operação/Relatórios)
-│       └── page.tsx            KPIs + 4 charts + tabela (mock)
-├── components/                 DS Lyx completo
-└── lib/
-    ├── auth-client.ts          Better Auth + isMembroBI()
-    ├── supabase.ts             createSupabaseBrowser / Server
-    ├── queries.ts              hooks Supabase
-    └── utils.ts
+│       ├── layout.tsx          AuthProvider → SidebarProvider → AppShell
+│       └── page.tsx            KPIs + 4 charts + tabela (mock, shadcn)
+├── components/
+│   ├── ui/                     shadcn base (15 componentes)
+│   ├── auth/auth-provider.tsx
+│   └── dashboard/
+│       ├── sidebar.tsx
+│       ├── sidebar-provider.tsx
+│       ├── app-shell.tsx
+│       ├── dashboard-header.tsx
+│       └── greeting.tsx
+├── hooks/
+│   └── use-sidebar.ts
+├── lib/
+│   ├── auth-client.ts          Better Auth + isMembroBI()
+│   ├── auth/                   stub Approach A
+│   │   ├── index.ts
+│   │   ├── current-user.ts
+│   │   └── role-permissions.ts
+│   ├── dashboards.ts           DashboardConfig[] do projeto
+│   ├── supabase.ts             createSupabaseBrowser / Server
+│   ├── queries.ts              hooks Supabase
+│   └── utils.ts
+└── types/
+    └── dashboard.ts
 ```
 
 ## Personalizar
 
 | Quero mudar | Onde |
 |---|---|
-| Brand "MeuBI" | `BRAND` em login + dashboard layout |
-| Cor accent | `app/globals.css` `--accent` |
-| Nav items | `navOperacional` em dashboard/layout.tsx |
-| Queries reais | `lib/queries.ts` — nome de views/tabelas |
+| Brand | `BRAND` em login + dashboard-header |
+| Cor accent | `src/app/globals.css` `--primary` |
+| Itens da sidebar | `src/lib/dashboards.ts` |
+| Auth real (Better Auth) | `src/lib/auth/current-user.ts` |
+| Permissões/papéis | `src/lib/auth/role-permissions.ts` |
+| Queries reais | `src/lib/queries.ts` |
 | URLs | `.env.local` |
 
 ## Components BI prontos (no `dashboard/page.tsx`)
 
-- KpiCard destaque (accent + delta)
-- KpiCard normal (delta verde/vermelho)
-- ChartCard wrapper
-- Area / Pie / Line / Bar charts
-- Tabela analítica `.lyx-table`
+- KPI cards (shadcn `<Card>` + `bg-primary/10` icon)
+- ChartCard wrapper (`<CardHeader>` + `<CardContent>`)
+- Area / Pie / Line / Bar charts (cores via `var(--primary)`)
+- Tabela com `bg-muted/50` header e `hover:bg-muted/30` rows
 
 Mocks → substituir por `useQuery` no Supabase.
 
@@ -118,3 +155,15 @@ Porta: 3002.
 
 - App precisa CRUD → `lyx-front-template`
 - App consome só monolith → `lyx-front-template`
+- BI hub central que lista outros BIs → use `lyx-bi-principal` direto (não duplicar)
+
+## Evolução pra Approach B (hub centralizado)
+
+Quando quiser que todos BIs compartilhem sessão com `lyx-bi-principal`:
+
+1. Configura Better Auth cross-subdomain (cookie `.lyx.com.br`)
+2. Centraliza `dashboards.ts` num pacote npm interno
+3. Cada BI consome esse pacote em vez do `src/lib/dashboards.ts` local
+4. `src/lib/auth/current-user.ts` aponta pra sessão única do hub
+
+Componentes da sidebar/app-shell já são compatíveis — não reescrever nada.
