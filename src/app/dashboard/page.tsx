@@ -18,6 +18,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { TrendingUp, Users, Percent, DollarSign } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // ─── Placeholder BI dashboard ──────────────────────────────────
 // Substitua os mocks por hooks de `lib/queries.ts` que consultam
@@ -31,13 +33,24 @@ const PERIODOS = [
   { value: "ytd", label: "No ano (YTD)" },
 ];
 
-const tooltipStyle = {
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius-sm)",
-  color: "var(--text-primary)",
+/* Cores semânticas — alinhado com lyx-bi-principal */
+const PRIMARY_COLOR = "#065763";
+const PRIMARY_LIGHT = "#0a8295";
+const PRIMARY_MUTED = "#2fa8b8";
+
+const PIE_COLORS = [PRIMARY_COLOR, PRIMARY_LIGHT, PRIMARY_MUTED, "#7ecfdb"];
+
+const TOOLTIP_STYLE = {
+  background: "var(--color-card, #ffffff)",
+  border: "1px solid var(--color-border, #e2e8ec)",
+  borderRadius: 8,
+  color: "var(--color-foreground, #0b1f24)",
   fontSize: "0.8rem",
 };
+
+const GRID_STROKE = "var(--color-border, #e2e8ec)";
+const AXIS_TICK = { fill: "var(--color-muted-foreground, #55707a)", fontSize: 12 };
+const AXIS_LINE = { stroke: "var(--color-border, #e2e8ec)" };
 
 const mockSerie = [
   { mes: "Jan", valor: 4200 },
@@ -63,177 +76,283 @@ const mockRanking = [
   { nome: "Cliente V", valor: 54100 },
 ];
 
-const CHART_COLORS = [
-  "var(--accent)",
-  "var(--success)",
-  "var(--warning)",
-  "var(--text-muted)",
+const kpiCards = [
+  {
+    label: "Receita Total",
+    value: "R$ 1.2M",
+    delta: "+12,4%",
+    sub: "vs período anterior",
+    icon: DollarSign,
+  },
+  {
+    label: "Ticket Médio",
+    value: "R$ 8.4k",
+    delta: "+5,1%",
+    sub: "vs período anterior",
+    icon: TrendingUp,
+  },
+  {
+    label: "Conversão",
+    value: "3,8%",
+    delta: "-0,2%",
+    sub: "vs período anterior",
+    icon: Percent,
+    deltaNegative: true,
+  },
+  {
+    label: "Novos Clientes",
+    value: "142",
+    delta: "+18%",
+    sub: "vs período anterior",
+    icon: Users,
+  },
 ];
 
 export default function BIDashboard() {
   const [periodo, setPeriodo] = useState("30d");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-          Período:
-        </span>
-        <select
-          className="form-select"
-          value={periodo}
-          onChange={(e) => setPeriodo(e.target.value)}
-          style={{ width: "auto", minWidth: 180 }}
-        >
-          {PERIODOS.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-        <button className="btn btn-secondary btn-sm">📅 Personalizado</button>
+    <div className="space-y-6">
+      {/* Cabeçalho com filtro de período */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão geral de indicadores</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Período:
+          </span>
+          <select
+            className="h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+          >
+            {PERIODOS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="card-grid card-grid-4">
-        <KpiCard destaque label="Receita Total" value="R$ 1.2M" delta="+12.4%" sub="vs período anterior" />
-        <KpiCard label="Ticket Médio" value="R$ 8.4k" delta="+5.1%" />
-        <KpiCard label="Conversão" value="3.8%" delta="-0.2%" deltaNegative />
-        <KpiCard label="Novos Clientes" value="142" delta="+18%" />
+      {/* KPI cards — 4 colunas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpiCards.map(({ label, value, delta, sub, icon: Icon, deltaNegative }) => (
+          <Card
+            key={label}
+            className="group transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
+                {delta && (
+                  <p
+                    className={`text-xs font-medium mt-1 ${
+                      deltaNegative ? "text-destructive" : "text-primary"
+                    }`}
+                  >
+                    {delta}{" "}
+                    <span className="text-muted-foreground font-normal">{sub}</span>
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="card-grid card-grid-2">
-        <ChartCard title="Evolução de Receita" subtitle="Últimos 6 meses">
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={mockSerie}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="mes" stroke="var(--text-muted)" fontSize={12} />
-              <YAxis stroke="var(--text-muted)" fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="valor" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.2} strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
+      {/* Gráficos — linha superior */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Evolução de Receita — AreaChart */}
+        <Card className="transition-shadow duration-200 hover:shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Evolução de Receita
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Últimos 6 meses</p>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={mockSerie}>
+                <defs>
+                  <linearGradient id="gradReceita" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={PRIMARY_COLOR} stopOpacity={0.18} />
+                    <stop offset="95%" stopColor={PRIMARY_COLOR} stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID_STROKE} />
+                <XAxis dataKey="mes" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Area
+                  type="monotone"
+                  dataKey="valor"
+                  name="Receita"
+                  stroke={PRIMARY_COLOR}
+                  fill="url(#gradReceita)"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: PRIMARY_COLOR, strokeWidth: 2, stroke: "var(--color-card, #ffffff)" }}
+                  activeDot={{ r: 6 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        <ChartCard title="Distribuição por Categoria" subtitle={periodo}>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={mockCategoria} dataKey="valor" nameKey="nome" cx="50%" cy="50%" outerRadius={90} label>
-                {mockCategoria.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* Distribuição por Categoria — PieChart */}
+        <Card className="transition-shadow duration-200 hover:shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Distribuição por Categoria
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {PERIODOS.find((p) => p.value === periodo)?.label ?? periodo}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={mockCategoria}
+                  dataKey="valor"
+                  nameKey="nome"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  innerRadius={40}
+                  strokeWidth={2}
+                  stroke="var(--color-card, #ffffff)"
+                >
+                  {mockCategoria.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="card-grid card-grid-2">
-        <ChartCard title="Tendência Mensal" subtitle="Linha temporal">
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={mockSerie}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="mes" stroke="var(--text-muted)" fontSize={12} />
-              <YAxis stroke="var(--text-muted)" fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
+      {/* Gráficos — linha inferior */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Tendência Mensal — LineChart */}
+        <Card className="transition-shadow duration-200 hover:shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Tendência Mensal
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Linha temporal</p>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={mockSerie}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID_STROKE} />
+                <XAxis dataKey="mes" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Line
+                  type="monotone"
+                  dataKey="valor"
+                  name="Valor"
+                  stroke={PRIMARY_COLOR}
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: PRIMARY_COLOR, strokeWidth: 2, stroke: "var(--color-card, #ffffff)" }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        <ChartCard title="Top Clientes" subtitle="Por receita acumulada">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={mockRanking} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis type="number" stroke="var(--text-muted)" fontSize={12} />
-              <YAxis dataKey="nome" type="category" stroke="var(--text-muted)" fontSize={11} width={80} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="valor" fill="var(--accent)" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* Top Clientes — BarChart horizontal */}
+        <Card className="transition-shadow duration-200 hover:shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Top Clientes
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Por receita acumulada</p>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={mockRanking} layout="vertical" barCategoryGap={8}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={GRID_STROKE} />
+                <XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                <YAxis
+                  dataKey="nome"
+                  type="category"
+                  tick={AXIS_TICK}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Bar dataKey="valor" name="Receita" fill={PRIMARY_COLOR} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="lyx-card">
-        <div style={{ marginBottom: 14 }}>
-          <h3 style={{ fontSize: "0.95rem", fontWeight: 700 }}>Detalhamento</h3>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 4 }}>
+      {/* Tabela analítica */}
+      <Card className="transition-shadow duration-200 hover:shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-foreground">
+            Detalhamento
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
             Tabela analítica — substitua pela query do Supabase
           </p>
-        </div>
-        <table className="lyx-table">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th style={{ textAlign: "right" }}>Receita</th>
-              <th style={{ textAlign: "right" }}>Pedidos</th>
-              <th style={{ textAlign: "right" }}>Ticket Médio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockRanking.map((r) => (
-              <tr key={r.nome}>
-                <td style={{ fontWeight: 600 }}>{r.nome}</td>
-                <td style={{ textAlign: "right" }}>R$ {r.valor.toLocaleString("pt-BR")}</td>
-                <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{Math.round(r.valor / 8400)}</td>
-                <td style={{ textAlign: "right", color: "var(--text-muted)" }}>R$ 8.4k</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  delta,
-  sub,
-  destaque,
-  deltaNegative,
-}: {
-  label: string;
-  value: string;
-  delta?: string;
-  sub?: string;
-  destaque?: boolean;
-  deltaNegative?: boolean;
-}) {
-  if (destaque) {
-    return (
-      <div className="stat-card" style={{ background: "var(--accent)", color: "#fff", border: "none", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", right: -32, bottom: -32, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-        <div style={{ position: "absolute", right: -16, top: -16, width: 96, height: 96, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: "0.7rem", fontWeight: 600, opacity: 0.9, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, lineHeight: 1 }}>{value}</div>
-          {delta && <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>{delta} <span style={{ opacity: 0.7 }}>{sub}</span></div>}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="stat-card">
-      <span className="stat-label">{label}</span>
-      <div className="stat-value">{value}</div>
-      {delta && (
-        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: deltaNegative ? "var(--danger)" : "var(--success)" }}>
-          {delta} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>{sub}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <div className="lyx-card">
-      <div style={{ marginBottom: 14 }}>
-        <h3 style={{ fontSize: "0.95rem", fontWeight: 700 }}>{title}</h3>
-        {subtitle && <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>{subtitle}</p>}
-      </div>
-      {children}
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Cliente
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Receita
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Pedidos
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Ticket Médio
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockRanking.map((r) => (
+                  <tr
+                    key={r.nome}
+                    className="border-b border-border/60 transition-colors hover:bg-muted/30 last:border-0"
+                  >
+                    <td className="px-4 py-3 text-sm font-semibold text-foreground">{r.nome}</td>
+                    <td className="px-4 py-3 text-sm text-right text-foreground">
+                      R$ {r.valor.toLocaleString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-muted-foreground">
+                      {Math.round(r.valor / 8400)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-muted-foreground">R$ 8,4k</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
