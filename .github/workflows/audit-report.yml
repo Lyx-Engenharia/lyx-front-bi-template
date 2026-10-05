@@ -16,7 +16,7 @@ concurrency:
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,7 +33,7 @@ jobs:
         run: npx depcruise . --config .dependency-cruiser.cjs --output-type=json --output-to=audit/depcruise.json
         continue-on-error: true
       - name: Tests + coverage
-        run: npm run test:coverage
+        run: npm run test:coverage -- --maxWorkers=$(nproc)
         continue-on-error: true
       - name: Coverage gate
         run: npm run coverage:gate
