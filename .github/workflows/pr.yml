@@ -28,7 +28,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
       - name: Run tests with coverage
-        run: npm run test:coverage -- --maxWorkers=$(nproc)
+        run: npm run test:coverage
       - name: Coverage gate (Fase 1 — warn)
         run: npm run coverage:gate
         continue-on-error: true
