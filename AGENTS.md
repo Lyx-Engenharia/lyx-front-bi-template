@@ -53,6 +53,8 @@ Modelo de branches: **`feat/*` → PR → `develop` → PR → `main` → deploy
 
 Detalhado em [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md).
 
+- Dúvida sobre PR, trem, deploy ou o agente de PRs (por que a PR não subiu, horários, conflito, Priorizar): leia https://github.com/Lyx-Engenharia/lyx-monolith/blob/main/docs/AGENTE_DE_PRS.md#perguntas-frequentes. Este repo não tem trem: o agente mergeia assim que aprova e o CI fica verde.
+
 ## Regras invioláveis
 
 - 🔒 **Auth delega tudo pro monolito.** Nada de login local, hash de senha, sessão local. Sign-in faz `POST /api/auth/sign-in/email` no monolito. Membership da org `bi` é validada em login.
